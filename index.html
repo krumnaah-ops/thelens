@@ -2772,7 +2772,1049 @@ select:focus-visible {
     grid-template-columns: repeat(2, 1fr);
   }
 }
-  </style>
+/* ═══════════════════════════════════════════════════════════
+   THE LENS — MOBILE OVERHAUL PATCH
+   Drop this block in RIGHT BEFORE the closing </style> tag.
+   It overrides the existing @media (max-width: 620px) rules.
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── MOBILE VARIABLES ── */
+@media (max-width: 620px) {
+  :root {
+    --topbar-h:   52px;
+    --statusbar-h: 0px;   /* status bar hidden on mobile — replaced by bottom nav */
+    --bottom-nav-h: 56px; /* new fixed bottom tab nav */
+    --sidebar-w:  100%;
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   1. TOPBAR — clean single-row on mobile
+   ══════════════════════════════════════════════════ */
+@media (max-width: 620px) {
+  .topbar {
+    height: var(--topbar-h);
+    flex-wrap: nowrap;
+    padding: 0 12px;
+    gap: 10px;
+    justify-content: space-between;
+  }
+
+  /* Hide center section (tab bar lives in bottom nav now) */
+  .topbar-center {
+    display: none !important;
+  }
+
+  .topbar-left {
+    order: 1;
+    flex: 0 0 auto;
+    gap: 8px;
+  }
+
+  .topbar-right {
+    order: 2;
+    flex: 0 0 auto;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  .logo-text  { font-size: 13px; letter-spacing: 0.14em; }
+  .logo-sub   { display: none; }
+  .date-display { display: none; }
+
+  /* REFRESH button — compact */
+  .btn-load {
+    font-size: 9px;
+    padding: 6px 12px;
+    min-height: 34px;
+    letter-spacing: 0.08em;
+  }
+
+  /* GAMES button */
+  .btn-menu {
+    display: flex !important;
+    font-size: 9px;
+    padding: 6px 10px;
+    min-height: 34px;
+    align-items: center;
+    gap: 4px;
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   2. BOTTOM TAB NAV — new fixed element on mobile
+   ══════════════════════════════════════════════════ */
+@media (max-width: 620px) {
+
+  /* We repurpose .tab-bar into a bottom nav */
+  .tab-bar {
+    /* Pull it out of the topbar and make it a fixed bottom strip */
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 200;
+    height: var(--bottom-nav-h);
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-radius: 0;
+    padding: 0;
+    gap: 0;
+    display: flex !important;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
+    /* Remove the inset pill shadow */
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.35);
+    margin-bottom: 0;
+  }
+
+  .tab-btn {
+    flex: 1;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 6px 4px;
+    border-radius: 0;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    gap: 3px;
+    position: relative;
+    transition: color 0.15s, background 0.15s;
+    -webkit-tap-highlight-color: rgba(56,189,248,0.1);
+  }
+
+  /* Active state: colored top border + accent text, no background pill */
+  .tab-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 12px;
+    right: 12px;
+    height: 2px;
+    background: var(--accent);
+    border-radius: 0 0 2px 2px;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .tab-btn.active {
+    color: var(--accent);
+    background: rgba(56,189,248,0.06);
+    box-shadow: none;
+  }
+  .tab-btn.active::before {
+    opacity: 1;
+  }
+
+  /* Tab icons (inject via ::after pseudo + content) */
+  .tab-btn[data-tab="looks"]::after   { content: '◈'; font-size: 14px; order: -1; }
+  .tab-btn[data-tab="pitcher"]::after { content: '⚾'; font-size: 13px; order: -1; }
+  .tab-btn[data-tab="hitter"]::after  { content: '🏏'; font-size: 13px; order: -1; }
+  .tab-btn[data-tab="bases"]::after   { content: '◇'; font-size: 14px; order: -1; }
+
+  /* Shorten labels */
+  .tab-btn[data-tab="looks"]   { }
+  .tab-btn[data-tab="pitcher"] { }
+  .tab-btn[data-tab="hitter"]  { }
+  .tab-btn[data-tab="bases"]   { }
+}
+
+/* ══════════════════════════════════════════════════
+   3. LAYOUT — fix body scroll + bottom nav clearance
+   ══════════════════════════════════════════════════ */
+@media (max-width: 620px) {
+
+  html, body {
+    overflow: auto;
+    height: 100%;
+  }
+
+  body {
+    overflow-x: hidden;
+  }
+
+  /* App layout: starts below topbar, ends above bottom nav */
+  .app-layout {
+    margin-top: var(--topbar-h);
+    height: auto;
+    min-height: calc(100vh - var(--topbar-h) - var(--bottom-nav-h));
+    overflow: visible;
+    flex-direction: column;
+    padding-bottom: var(--bottom-nav-h);
+  }
+
+  /* Main panel: full scrollable content */
+  .main-panel {
+    overflow-y: visible;
+    overflow-x: hidden;
+    width: 100%;
+  }
+
+  /* Hide desktop statusbar on mobile */
+  .statusbar {
+    display: none !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   4. SIDEBAR (GAME LIST) — full-screen slide-in
+   ══════════════════════════════════════════════════ */
+@media (max-width: 620px) {
+
+  .sidebar {
+    position: fixed;
+    top: var(--topbar-h);
+    left: 0;
+    right: 0;
+    /* Ends above bottom nav */
+    bottom: var(--bottom-nav-h);
+    width: 100%;
+    min-width: 100%;
+    z-index: 300;
+    transform: translateX(-100%);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    overflow-y: auto;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+    /* Subtle shadow to separate from content */
+    box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+  }
+
+  /* Bigger game items — easier to tap */
+  .game-item {
+    padding: 12px 16px;
+    margin: 3px 8px;
+  }
+
+  .game-item-teams {
+    font-size: 15px;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+
+  .game-item-meta {
+    font-size: 11px;
+  }
+
+  .game-item-pitchers {
+    font-size: 10px;
+    margin-top: 3px;
+  }
+
+  /* Date nav tabs — taller touch targets */
+  .date-tab {
+    font-size: 10px;
+    padding: 8px 0;
+    min-height: 38px;
+  }
+
+  .section-label {
+    font-size: 10px;
+  }
+
+  /* Sidebar header spacing */
+  .sidebar-header {
+    padding: 12px 14px 10px;
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   5. MATCHUP HEADER — stack cleanly
+   ══════════════════════════════════════════════════ */
+@media (max-width: 620px) {
+
+  .matchup-header {
+    padding: 12px 16px;
+    gap: 0;
+  }
+
+  .team-abbr {
+    font-size: 20px;
+  }
+
+  .team-name {
+    font-size: 9px;
+  }
+
+  .game-time {
+    font-size: 12px;
+  }
+
+  .game-venue {
+    font-size: 8px;
+  }
+
+  .vs-divider {
+    font-size: 8px;
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   6. PITCHER CARDS — single column, readable
+   ══════════════════════════════════════════════════ */
+@media (max-width: 620px) {
+
+  .pitcher-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .pitcher-card {
+    padding: 14px 14px 18px;
+    /* Divider between away and home pitcher */
+    border-right: none !important;
+    border-bottom: 1px solid var(--border);
+  }
+  .pitcher-card:last-child {
+    border-bottom: none;
+  }
+
+  /* Pitcher name + buttons: stack nicely */
+  .pitcher-card-header {
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+
+  .pitcher-name {
+    font-size: 15px;
+    flex: 1 1 100%;
+    order: 2;
+  }
+
+  .pitcher-role-tag {
+    order: 1;
+    font-size: 8px;
+  }
+
+  .pitcher-hand {
+    order: 3;
+    font-size: 10px;
+  }
+
+  /* Action buttons (PITCH PLOT, LAST START, REPORT) — row of chips */
+  .btn-pitch-plot {
+    font-size: 9px;
+    padding: 6px 10px;
+    min-height: 32px;
+    flex: 1;
+    text-align: center;
+    margin-left: 0 !important;
+  }
+
+  /* Wrap the three buttons into a tidy row */
+  .pitcher-card-header > .btn-pitch-plot {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  /* Workload alert chips — wrap */
+  .workload-alert {
+    flex-wrap: wrap;
+  }
+
+  .workload-chip {
+    font-size: 9px;
+  }
+
+  /* Stat pills — larger */
+  .stat-pill {
+    padding: 6px 10px;
+    min-width: 52px;
+  }
+  .stat-pill-val { font-size: 14px; }
+  .stat-pill-lbl { font-size: 9px;  }
+
+  /* Zone + arsenal: side by side still works on most phones */
+  .zone-arsenal-row {
+    flex-direction: row;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .zone-canvas {
+    width: 120px;
+    height: 120px;
+  }
+
+  /* Arsenal text */
+  .arsenal-pitch-name { font-size: 11px; }
+  .arsenal-pct        { font-size: 10px; }
+  .arsenal-velo       { font-size: 10px; }
+
+  /* Game log table — horizontal scroll */
+  .log-table {
+    font-size: 11px;
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+  .log-table th { font-size: 10px; padding: 4px 6px; }
+  .log-table td { padding: 5px 6px; }
+
+  /* Splits: 2 col still fits */
+  .splits-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .split-stat-val { font-size: 13px; }
+  .split-stat-lbl { font-size: 8px; }
+
+  /* Trending grid — 2×2 on mobile */
+  .trending-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+  .trending-col  { padding: 8px 10px; }
+  .trending-val  { font-size: 15px; }
+  .trending-sub  { font-size: 9px; }
+
+  /* Extended stats wrap */
+  .ext-stat-val { font-size: 13px; }
+  .ext-stat-lbl { font-size: 8px; }
+
+  /* Savant percentile circles */
+  .pct-circle {
+    width: 40px;
+    height: 40px;
+    font-size: 12px;
+  }
+  .pct-label { font-size: 8px; }
+  .pct-grid  { gap: 8px; }
+}
+
+/* ══════════════════════════════════════════════════
+   7. GAME INTEL BAR — horizontal scroll on mobile
+   ══════════════════════════════════════════════════ */
+@media (max-width: 620px) {
+
+  .game-intel {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 8px 12px;
+    gap: 8px;
+  }
+
+  .game-intel::-webkit-scrollbar { display: none; }
+
+  .intel-chip {
+    flex-shrink: 0;
+    font-size: 10px;
+    padding: 5px 10px;
+    white-space: nowrap;
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   8. BATTER MATCHUP — full width, bigger selects
+   ══════════════════════════════════════════════════ */
+@media (max-width: 620px) {
+
+  .matchup-section {
+    padding: 14px 14px 20px;
+  }
+
+  .matchup-pickers {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .batter-select {
+    font-size: 13px;
+    padding: 9px 32px 9px 12px;
+    min-height: 44px;
+  }
+
+  .matchup-stats-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+
+  .matchup-stat-val { font-size: 14px; }
+  .matchup-stat-lbl { font-size: 9px; }
+}
+
+/* ══════════════════════════════════════════════════
+   9. HITTER INTEL TAB
+   ══════════════════════════════════════════════════ */
+@media (max-width: 620px) {
+
+  .hitter-panels {
+    grid-template-columns: 1fr;
+  }
+
+  .hitter-team-panel {
+    border-right: none !important;
+    border-bottom: 1px solid var(--border);
+  }
+  .hitter-team-panel:last-child {
+    border-bottom: none;
+  }
+
+  /* Hitter rows — larger touch targets */
+  .hitter-row {
+    padding: 10px 12px;
+    min-height: 48px;
+    gap: 8px;
+  }
+
+  .hitter-name {
+    font-size: 13px;
+  }
+
+  .hitter-order {
+    font-size: 11px;
+    width: 18px;
+  }
+
+  .hitter-pos {
+    font-size: 10px;
+  }
+
+  /* Always show the report button on mobile (no hover) */
+  .btn-hitter-report {
+    opacity: 1 !important;
+    font-size: 11px;
+    padding: 4px 8px;
+    color: var(--text-muted);
+    min-width: 32px;
+  }
+
+  /* Mini stats — compact */
+  .hitter-mini-stats {
+    gap: 5px;
+    font-size: 10px;
+  }
+
+  /* Hitter inline card */
+  .hitter-inline-card {
+    margin: 4px 8px 8px;
+    padding: 14px;
+  }
+
+  /* Hitter card tabs */
+  .hcard-tabs {
+    gap: 2px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin-bottom: 10px;
+    border-radius: 0;
+    background: transparent;
+    padding: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .hcard-tabs::-webkit-scrollbar { display: none; }
+
+  .hcard-tab {
+    flex: 1;
+    min-width: 64px;
+    font-size: 9px;
+    padding: 8px 6px;
+    border-radius: 0;
+    background: transparent;
+    border-bottom: 2px solid transparent;
+    color: var(--text-muted);
+  }
+  .hcard-tab.active {
+    background: transparent;
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+    box-shadow: none;
+  }
+
+  /* Splits grid 2-col */
+  .splits-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  /* Trending grid 2-col */
+  #hitterDetail .trending-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  /* Prop model tabs — scroll */
+  .hitter-model-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex-wrap: nowrap;
+    gap: 6px;
+    padding-bottom: 2px;
+  }
+  .hitter-model-tabs::-webkit-scrollbar { display: none; }
+  .hitter-model-tab {
+    flex-shrink: 0;
+    font-size: 9px;
+    padding: 6px 12px;
+  }
+
+  /* Prop model table — horizontal scroll */
+  .hitter-model-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    font-size: 10px;
+  }
+  .hitter-model-table th { font-size: 8px; padding: 0 6px 5px 0; }
+  .hitter-model-table td { padding: 6px 6px 6px 0; }
+}
+
+/* ══════════════════════════════════════════════════
+   10. BASES INTEL TAB
+   ══════════════════════════════════════════════════ */
+@media (max-width: 620px) {
+
+  .bases-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 10px 12px;
+  }
+
+  .bases-row-name {
+    font-size: 13px;
+  }
+
+  .bases-row-stats {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .bases-stat {
+    font-size: 11px;
+  }
+
+  /* SB model table — horizontal scroll */
+  .sb-model-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    font-size: 10px;
+  }
+  .sb-model-table th { font-size: 8px; padding: 0 6px 5px 0; }
+  .sb-model-table td { padding: 6px 6px 6px 0; font-size: 9px; }
+
+  .sb-score-bar-wrap { width: 50px; }
+
+  .sb-factor-pills { flex-wrap: wrap; }
+  .sb-factor-pill  { font-size: 8px; }
+
+  .catcher-chip {
+    font-size: 10px;
+    padding: 8px 10px;
+  }
+
+  .sb-model-note {
+    font-size: 8px;
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   11. TOP LOOKS TAB
+   ══════════════════════════════════════════════════ */
+@media (max-width: 620px) {
+
+  .looks-page {
+    padding: 14px 12px;
+  }
+
+  .looks-title {
+    font-size: 15px;
+  }
+
+  .looks-sub {
+    font-size: 10px;
+  }
+
+  .looks-header {
+    margin-bottom: 16px;
+  }
+
+  .best-looks-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .best-look-card {
+    padding: 12px 14px;
+  }
+
+  .best-look-matchup {
+    font-size: 13px;
+  }
+
+  .best-look-edge {
+    font-size: 10px;
+  }
+
+  .best-look-score {
+    font-size: 15px;
+  }
+
+  /* Expanded look card */
+  .look-expanded {
+    padding: 12px 14px;
+  }
+
+  .look-expanded-header {
+    font-size: 13px;
+  }
+
+  .look-edge-item {
+    font-size: 11px;
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   12. PITCH PLOT MODAL — full screen on mobile
+   ══════════════════════════════════════════════════ */
+@media (max-width: 620px) {
+
+  #pp-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  #pp-modal {
+    width: 100%;
+    max-width: 100%;
+    max-height: 95vh;
+    border-radius: 16px 16px 0 0;
+    padding: 18px 14px 24px;
+    /* Bottom sheet style */
+    border-bottom: none;
+  }
+
+  /* Pull handle visual cue */
+  #pp-modal::before {
+    content: '';
+    display: block;
+    width: 36px;
+    height: 4px;
+    background: var(--border2);
+    border-radius: 2px;
+    margin: 0 auto 14px;
+  }
+
+  #pp-modal-title {
+    font-size: 12px;
+    padding-right: 40px;
+  }
+
+  #pp-modal-sub {
+    font-size: 10px;
+  }
+
+  /* Filter bar — horizontal scroll */
+  #pp-filter-bar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+    gap: 4px;
+  }
+  #pp-filter-bar::-webkit-scrollbar { display: none; }
+
+  .pp-type-btn {
+    flex-shrink: 0;
+    font-size: 9px;
+    padding: 5px 10px;
+    min-height: 30px;
+  }
+
+  /* Extra controls — horizontal scroll */
+  #pp-extra-controls {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 5px;
+    padding-bottom: 2px;
+  }
+  #pp-extra-controls::-webkit-scrollbar { display: none; }
+
+  .pp-toggle {
+    flex-shrink: 0;
+    font-size: 9px;
+    padding: 5px 9px;
+    min-height: 30px;
+  }
+
+  /* Zone plot — taller aspect ratio on mobile */
+  #pp-zone-wrap {
+    padding-bottom: 80%;
+  }
+
+  /* Stats row — 2x2 grid */
+  #pp-stats-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .pp-stat-chip-val { font-size: 16px; }
+  .pp-stat-chip-lbl { font-size: 9px; }
+
+  /* Legend — wrap */
+  #pp-legend {
+    gap: 5px 10px;
+  }
+  .pp-legend-item { font-size: 10px; }
+}
+
+/* ══════════════════════════════════════════════════
+   13. PITCHER REPORT MODAL — full screen on mobile
+   ══════════════════════════════════════════════════ */
+@media (max-width: 620px) {
+
+  #pr-overlay,
+  #hr-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  #pr-modal,
+  #hr-modal {
+    width: 100%;
+    max-width: 100%;
+    max-height: 95vh;
+    border-radius: 16px 16px 0 0;
+    padding: 18px 14px 28px;
+    border-bottom: none;
+  }
+
+  #pr-modal::before,
+  #hr-modal::before {
+    content: '';
+    display: block;
+    width: 36px;
+    height: 4px;
+    background: var(--border2);
+    border-radius: 2px;
+    margin: 0 auto 14px;
+  }
+
+  .pr-header { flex-wrap: wrap; }
+  .pr-name   { font-size: 14px; }
+  .pr-meta   { font-size: 10px; }
+
+  .pr-stat-val { font-size: 14px; }
+  .pr-stat-lbl { font-size: 8px; }
+
+  .pr-stat-grid     { grid-template-columns: repeat(3, 1fr); gap: 5px; }
+  .pr-stat-grid.wide{ grid-template-columns: repeat(3, 1fr); }
+
+  /* Arsenal table — horizontal scroll */
+  .pr-arsenal-table,
+  .pr-starts-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    font-size: 10px;
+  }
+
+  .pr-verdict { font-size: 10px; line-height: 1.7; }
+}
+
+/* ══════════════════════════════════════════════════
+   14. LIVE SCOREBOARD — mobile tweaks
+   ══════════════════════════════════════════════════ */
+@media (max-width: 620px) {
+
+  .scoreboard-score {
+    font-size: 24px;
+    gap: 16px;
+  }
+
+  .live-pitchers {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  /* Linescore — horizontal scroll */
+  .linescore-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    font-size: 10px;
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   15. HITTER CARD MOBILE OVERLAY — fine-tuning
+   ══════════════════════════════════════════════════ */
+@media (max-width: 620px) {
+
+  #hc-overlay {
+    /* Ensure it sits above bottom nav */
+    bottom: var(--bottom-nav-h);
+  }
+
+  /* Back button — larger tap target */
+  #hc-back {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    padding: 0;
+  }
+
+  #hc-title {
+    font-size: 12px;
+  }
+
+  #hc-content {
+    padding: 14px 12px;
+  }
+
+  /* Log table in overlay — scroll */
+  #hc-content .log-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+
+  /* HR timeline — horizontal scroll */
+  .hr-timeline {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .hr-timeline::-webkit-scrollbar { display: none; }
+
+  .hr-tick-bar  { width: 10px; }
+  .hr-tick-label{ font-size: 7px; }
+
+  /* Monthly table */
+  #hc-content .log-table table,
+  #hc-content table.log-table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   16. WELCOME SCREENS — centered, above bottom nav
+   ══════════════════════════════════════════════════ */
+@media (max-width: 620px) {
+
+  .welcome-screen {
+    min-height: calc(100vh - var(--topbar-h) - var(--bottom-nav-h) - 40px);
+    height: auto;
+    padding: 40px 20px;
+  }
+
+  .welcome-title { font-size: 14px; }
+  .welcome-sub   { font-size: 12px; }
+}
+
+/* ══════════════════════════════════════════════════
+   17. LINEUP BADGES + CONFIRMATION BARS
+   ══════════════════════════════════════════════════ */
+@media (max-width: 620px) {
+
+  .lineup-confirmed-bar,
+  .lineup-projected-bar {
+    font-size: 9px;
+    padding: 6px 12px;
+    border-radius: 4px;
+  }
+
+  .lineup-badge {
+    font-size: 8px;
+    padding: 2px 6px;
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   18. GENERAL TOUCH IMPROVEMENTS
+   ══════════════════════════════════════════════════ */
+@media (max-width: 620px) {
+
+  /* All tappable elements — minimum 44px touch target */
+  .game-item,
+  .hitter-row,
+  .bases-row,
+  .best-look-card,
+  .date-tab {
+    min-height: 44px;
+  }
+
+  /* Smoother scrolling globally */
+  .game-list,
+  .main-panel,
+  #hc-content,
+  #pp-modal,
+  #pr-modal,
+  #hr-modal {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  /* Prevent tap highlight flash on everything */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Buttons — tap-friendly */
+  button {
+    touch-action: manipulation;
+    -webkit-appearance: none;
+    user-select: none;
+  }
+
+  /* Select elements — bigger */
+  select {
+    font-size: 16px !important; /* prevents iOS zoom on focus */
+    min-height: 44px;
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   19. SMALL PHONE (<390px) — extra squeeze
+   ══════════════════════════════════════════════════ */
+@media (max-width: 390px) {
+
+  .topbar { padding: 0 10px; }
+  .logo-text { font-size: 11px; }
+
+  .tab-btn {
+    font-size: 7px;
+    padding: 5px 2px;
+  }
+
+  .tab-btn[data-tab="looks"]::after,
+  .tab-btn[data-tab="pitcher"]::after,
+  .tab-btn[data-tab="hitter"]::after,
+  .tab-btn[data-tab="bases"]::after {
+    font-size: 12px;
+  }
+
+  .pitcher-name { font-size: 13px; }
+  .team-abbr    { font-size: 18px; }
+
+  .stat-pill { padding: 5px 8px; min-width: 46px; }
+  .stat-pill-val { font-size: 13px; }
+
+  .best-looks-grid { gap: 6px; }
+}  </style>
 </head>
 <body>
 
