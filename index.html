@@ -3881,13 +3881,20 @@ select:focus-visible {
       <button id="loadBtn" type="button" class="btn-load" onclick="onLoad()" aria-label="Refresh today's MLB games">REFRESH</button>
       <div class="live-dot" id="liveDot" title="Data status"></div>
     </div>
+    
 </header>
-  <div class="tab-bar">
-    <button class="tab-btn active" data-tab="looks" onclick="switchTab('looks')" type="button">TOP LOOKS</button>
-    <button class="tab-btn" data-tab="pitcher" onclick="switchTab('pitcher')" type="button">PITCHER INTEL</button>
-    <button class="tab-btn" data-tab="hitter" onclick="switchTab('hitter')" type="button">HITTER INTEL</button>
-    <button class="tab-btn" data-tab="bases" onclick="switchTab('bases')" type="button">BASES INTEL</button>
-  </div>
+<nav class="desktop-tab-bar" role="navigation" aria-label="Main tabs">
+  <button class="dtab-btn active" data-tab="looks" onclick="switchTab('looks')" type="button">TOP LOOKS</button>
+  <button class="dtab-btn" data-tab="pitcher" onclick="switchTab('pitcher')" type="button">PITCHER INTEL</button>
+  <button class="dtab-btn" data-tab="hitter" onclick="switchTab('hitter')" type="button">HITTER INTEL</button>
+  <button class="dtab-btn" data-tab="bases" onclick="switchTab('bases')" type="button">BASES INTEL</button>
+</nav>
+<div class="tab-bar">
+  <button class="tab-btn active" data-tab="looks" onclick="switchTab('looks')" type="button">TOP LOOKS</button>
+  <button class="tab-btn" data-tab="pitcher" onclick="switchTab('pitcher')" type="button">PITCHER INTEL</button>
+  <button class="tab-btn" data-tab="hitter" onclick="switchTab('hitter')" type="button">HITTER INTEL</button>
+  <button class="tab-btn" data-tab="bases" onclick="switchTab('bases')" type="button">BASES INTEL</button>
+</div>
   <div class="app-layout">
     <aside class="sidebar" role="complementary" aria-label="Game list">
       <div class="sidebar-header" style="flex-direction:column;align-items:stretch;gap:8px;padding-bottom:8px">
