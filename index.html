@@ -67,6 +67,40 @@ body {
   -webkit-tap-highlight-color: transparent;
   cursor: default;
 }
+/* ── DESKTOP TAB BAR ── */
+.desktop-tab-bar {
+  display: flex;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: fixed;
+  top: var(--topbar-h);
+  left: 0; right: 0;
+  z-index: 99;
+  padding: 0 16px;
+}
+.dtab-btn {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 10px 20px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition);
+  touch-action: manipulation;
+  -webkit-appearance: none;
+}
+.dtab-btn:hover:not(.active) { color: var(--text); }
+.dtab-btn.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+@media (max-width: 620px) {
+  .desktop-tab-bar { display: none; }
+}
 
 /* ── TOPBAR ── */
 .topbar {
@@ -176,9 +210,15 @@ body {
 /* ── APP LAYOUT ── */
 .app-layout {
   display: flex;
-  height: calc(100vh - var(--topbar-h) - var(--statusbar-h));
-  margin-top: var(--topbar-h);
+  height: calc(100vh - var(--topbar-h) - var(--statusbar-h) - 37px);
+  margin-top: calc(var(--topbar-h) + 37px);
   overflow: hidden;
+}
+@media (max-width: 620px) {
+  .app-layout {
+    height: auto;
+    margin-top: var(--topbar-h);
+  }
 }
 
 /* ── SIDEBAR ── */
@@ -3835,9 +3875,7 @@ select:focus-visible {
       <span class="logo-text">THE LENS</span>
       <span class="logo-sub">MATCHUP INTEL</span>
     </div>
-   <div class="topbar-center">
-      <div class="date-display" id="dateDisplay"></div>
-    </div>
+  
     <div class="topbar-right">
       <button id="menuBtn" type="button" class="btn-menu" onclick="toggleMenu()" aria-label="Toggle game list menu" aria-expanded="false">☰ GAMES</button>
       <button id="loadBtn" type="button" class="btn-load" onclick="onLoad()" aria-label="Refresh today's MLB games">REFRESH</button>
@@ -4304,7 +4342,7 @@ let loadBtn, liveDot, gameList, gameCount, statusMsg, welcomeScreen, matchupDeta
 // ── INIT ──
 // ── TAB SWITCHING ──
 window.switchTab = function(tab) {
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.tab-btn, .dtab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
   const tabEl = $(tab + 'Tab');
   if (tabEl) tabEl.classList.add('active');
