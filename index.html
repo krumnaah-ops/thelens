@@ -6835,6 +6835,7 @@ window.selectGame = async function selectGame(idx) {
 
   // Close mobile menu when game selected
   document.querySelector('.sidebar')?.classList.remove('open');
+  switchTab('pitcher');
 
   welcomeScreen.classList.add('hidden');
   matchupDetail.classList.remove('hidden');
