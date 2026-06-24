@@ -7237,7 +7237,7 @@ async function renderGameIntel(game) {
       const gameTime = new Date(game.start_time);
       const hour = gameTime.getUTCHours();
       const dateStr = game.game_date || todayStr();
-      const wxData = await apiFetch(`https://api.open-meteo.com/v1/forecast?latitude=${coords[0]}&longitude=${coords[1]}&hourly=temperature_2m,windspeed_10m,winddirection_10m,relative_humidity_2m,precipitation_probability&temperature_unit=fahrenheit&windspeed_unit=mph&forecast_days=2&timezone=America/New_York`).catch(()=>null);
+     const wxData = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${coords[0]}&longitude=${coords[1]}&hourly=temperature_2m,windspeed_10m,winddirection_10m,relative_humidity_2m,precipitation_probability&temperature_unit=fahrenheit&windspeed_unit=mph&forecast_days=2&timezone=America/New_York`, { signal: AbortSignal.timeout(5000) }).then(r => r.json()).catch(()=>null);
       if (wxData?.hourly) {
         // Find the hour closest to game time
         const times = wxData.hourly.time || [];
