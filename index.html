@@ -4394,8 +4394,10 @@ if (document.readyState === 'loading') {
 }
 
 function setDateDisplay() {
+  const el = $('dateDisplay');
+  if (!el) return;
   const d = new Date();
-  $('dateDisplay').textContent = d.toLocaleDateString('en-US',{weekday:'short',year:'numeric',month:'short',day:'numeric'}).toUpperCase();
+  el.textContent = d.toLocaleDateString('en-US',{weekday:'short',year:'numeric',month:'short',day:'numeric'}).toUpperCase();
 }
 function setStatus(msg, type='') {
   statusMsg.textContent = msg;
