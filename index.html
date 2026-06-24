@@ -6573,6 +6573,210 @@ async function computeBestHitterLooks(games) {
 
   const today = todayStr();
   const todayGames = games.filter(g => g.game_date === today);
+  if (!todayGames.length) { panel.innerHTML = ''; return; }
+
+  panel.innerHTML = `
+    <div class="best-looks-header">
+      <span class="section-label">TOP HITTER PROPS TODAY</span>
+      <span class="best-looks-sub">Individual batter scoring across all today's games</span>
+    </div>
+    <div style="padding:12px 0">
+      <button id="loadTopHittersBtn" class="btn-load" style="font-size:10px;padding:8px 18px" onclick="loadTopHitters()">
+        LOAD TOP HITTERS
+      </button>
+      <div style="font-family:var(--mono);font-size:9px;color:var(--text-muted);margin-top:8px">
+        Fetches rosters + stats for all today's games — takes ~15s
+      </div>
+    </div>`;
+}
+
+window.loadTopHitters = async function() {
+  const panel = $('looksHitter');
+  const btn = $('loadTopHittersBtn');
+  if (!panel || !btn) return;
+
+  btn.disabled = true;
+  btn.textContent = 'LOADING...';
+  panel.querySelector('div[style]').innerHTML = `
+    <div class="looks-loading" style="justify-content:flex-start;padding:12px 0">
+      <div class="spinner"></div>
+      <span style="font-family:var(--mono);font-size:10px;color:var(--text-muted)">Fetching rosters and stats…</span>
+    </div>`;
+
+  const today = todayStr();
+  const todayGames = state.games.filter(g => g.game_date === today);
+  const season = new Date().getFullYear();
+  const PITCHER_CODES = new Set(['P','SP','RP','CP','1']);
+
+  // Collect all unique team IDs
+  const teamIds = new Set();
+  todayGames.forEach(g => {
+    if (g.away_team_id) teamIds.add(g.away_team_id);
+    if (g.home_team_id) teamIds.add(g.home_team_id);
+  });
+
+  // Fetch all rosters in parallel
+  const rosters = {};
+  await Promise.allSettled([...teamIds].map(async tid => {
+    try {
+      const d = await apiFetch(`${MLB_API_BASE}/teams/${tid}/roster?rosterType=active&season=${season}&hydrate=person(batSide,pitchHand)`);
+      rosters[tid] = (d.roster || []).filter(p =>
+        !PITCHER_CODES.has(p.position?.abbreviation) &&
+        !PITCHER_CODES.has(p.position?.code)
+      );
+    } catch(e) { rosters[tid] = []; }
+  }));
+
+  // Collect all unique player IDs
+  const allPlayers = {};
+  Object.values(rosters).forEach(roster => {
+    roster.forEach(p => {
+      if (p.person?.id) allPlayers[p.person.id] = p;
+    });
+  });
+
+  // Fetch season stats for all batters in parallel (batches of 1 each, Promise.allSettled)
+  const batterStats = {};
+  await Promise.allSettled(Object.keys(allPlayers).map(async pid => {
+    try {
+      const d = await apiFetch(`${MLB_API_BASE}/people/${pid}/stats?stats=season&group=hitting&season=${season}&sportId=1`);
+      batterStats[pid] = d.stats?.[0]?.splits?.[0]?.stat || null;
+    } catch(e) {}
+  }));
+
+  // Score every batter using existing HR model
+  const results = [];
+  todayGames.forEach(g => {
+    const gIdx = state.games.indexOf(g);
+
+    [
+      { teamId: g.away_team_id, teamAbbr: g.away_abbr, oppPitcher: g.home_pitcher, side: 'away' },
+      { teamId: g.home_team_id, teamAbbr: g.home_abbr, oppPitcher: g.away_pitcher, side: 'home' },
+    ].forEach(({ teamId, teamAbbr, oppPitcher, side }) => {
+      const roster = rosters[teamId] || [];
+      const lineupOrder = side === 'away'
+        ? (g.lineups?.awayPlayers || []).map(p => p.id ?? p.person?.id)
+        : (g.lineups?.homePlayers || []).map(p => p.id ?? p.person?.id);
+
+      roster.forEach((p, i) => {
+        const pid = String(p.person?.id || '');
+        const st = batterStats[pid];
+        if (!st) return;
+        if (parseInt(st.atBats || 0) < 20) return;
+
+        const sv = state.savant.hitterExpected?.[pid] || state.savant.hitterStatcast?.[pid] || null;
+        const lineupPos = lineupOrder.indexOf(parseInt(pid));
+        const paWeight = lineupPos >= 0 && lineupPos <= 1 ? 1.08
+          : lineupPos >= 2 && lineupPos <= 4 ? 1.02
+          : lineupPos >= 5 ? 0.95 : 1.0;
+
+        // HR score
+        const hrR = scoreHR(p, st, sv, oppPitcher, g.venue, null, paWeight, false);
+        // Only include batters with some HR upside
+        if (parseInt(st.homeRuns || 0) < 1 && (!sv?.barrel_pct || parseFloat(sv.barrel_pct) < 4)) return;
+
+        // TB score
+        const tbR = scoreTB(p, st, sv, oppPitcher, g.venue, null, paWeight, false);
+        // Hit score
+        const hitR = scoreHit(p, st, sv, oppPitcher, null, paWeight, false);
+
+        results.push({
+          name: p.person?.fullName || '?',
+          pos: p.position?.abbreviation || '?',
+          team: teamAbbr,
+          opp: side === 'away' ? g.home_abbr : g.away_abbr,
+          batHand: p.person?.batSide?.code || '?',
+          hrScore: hrR.score,
+          tbScore: tbR.score,
+          hitScore: hitR.score,
+          hrFactors: hrR.factors,
+          gameIdx: gIdx,
+          avg: st.avg ?? '—',
+          hr: st.homeRuns ?? 0,
+          ops: st.ops ?? '—',
+        });
+      });
+    });
+  });
+
+  results.sort((a, b) => b.hrScore - a.hrScore);
+  const top = results.slice(0, 10);
+
+  if (!top.length) {
+    panel.innerHTML = '<div class="empty-state">No hitter data available.</div>';
+    return;
+  }
+
+  // Active prop tab state
+  let activeTab = 'hr';
+
+  function renderTopHittersTable(tab) {
+    const sorted = [...results].sort((a, b) =>
+      tab === 'hr' ? b.hrScore - a.hrScore :
+      tab === 'tb' ? b.tbScore - a.tbScore :
+      b.hitScore - a.hitScore
+    ).slice(0, 10);
+
+    const scoreKey = tab === 'hr' ? 'hrScore' : tab === 'tb' ? 'tbScore' : 'hitScore';
+    const factorsKey = tab === 'hr' ? 'hrFactors' : null;
+
+    return `<table class="sb-model-table" style="margin-top:10px">
+      <thead><tr>
+        <th>BATTER</th><th>TEAM</th><th>OPP</th><th>AVG</th><th>HR</th><th>OPS</th><th style="text-align:right">SCORE</th>
+      </tr></thead>
+      <tbody>${sorted.map(r => {
+        const score = r[scoreKey];
+        const bc = score >= 68 ? 'var(--green)' : score >= 54 ? 'var(--amber)' : '#64748B';
+        return `<tr>
+          <td>
+            <div style="font-weight:600;color:var(--text);font-family:var(--mono);font-size:11px">${r.name}</div>
+            <div style="font-size:8px;color:var(--text-muted)">${r.pos} · ${r.batHand}HB</div>
+          </td>
+          <td style="font-family:var(--mono);font-size:10px;color:var(--text-muted)">${r.team}</td>
+          <td style="font-family:var(--mono);font-size:10px;color:var(--text-muted)">vs ${r.opp}</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--text)">${r.avg}</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--text)">${r.hr}</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--text)">${r.ops}</td>
+          <td style="text-align:right">
+            <span style="font-family:var(--mono);font-weight:700;font-size:13px;color:${bc}">${score}</span>
+          </td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+  }
+
+  panel.innerHTML = `
+    <div class="best-looks-header">
+      <span class="section-label">TOP HITTER PROPS TODAY</span>
+      <span class="best-looks-sub">${results.length} batters scored across ${todayGames.length} games</span>
+    </div>
+    <div class="hitter-model-tabs" style="margin-top:10px">
+      <button class="hitter-model-tab active" id="thTab-hr"  onclick="switchTopHitterTab('hr')">HOME RUN</button>
+      <button class="hitter-model-tab"        id="thTab-tb"  onclick="switchTopHitterTab('tb')">TOTAL BASES</button>
+      <button class="hitter-model-tab"        id="thTab-hit" onclick="switchTopHitterTab('hit')">HITS</button>
+    </div>
+    <div id="topHittersTable">${renderTopHittersTable('hr')}</div>
+    <div class="sb-model-note" style="margin-top:8px">Score &ge;68 = FAVORABLE · 54–67 = SLIGHT EDGE · &lt;54 = NEUTRAL · Click a game in the sidebar then Hitter Intel for full per-batter breakdown</div>`;
+
+  panel._renderFn = renderTopHittersTable;
+};
+
+window.switchTopHitterTab = function(tab) {
+  ['hr','tb','hit'].forEach(t => {
+    const b = $('thTab-' + t);
+    if (b) b.classList.toggle('active', t === tab);
+  });
+  const tableEl = $('topHittersTable');
+  const panel = $('looksHitter');
+  if (tableEl && panel?._renderFn) {
+    tableEl.innerHTML = panel._renderFn(tab);
+  }
+};
+  const panel = $('looksHitter');
+  if (!panel) return;
+
+  const today = todayStr();
+  const todayGames = games.filter(g => g.game_date === today);
   if (!todayGames.length) { panel.classList.add('hidden'); return; }
 
   // Score hitters who face weak pitchers in hitter-friendly parks
