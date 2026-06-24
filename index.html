@@ -9381,7 +9381,7 @@ async function loadBullpen(side, teamId, oppPitcherHand) {
     return '<span class="hm-pill ' + cls + '">' + label + '</span>';
   }
 
-  function scoreHR(p, st, sv, oppPitcher, venue, trn, paWeight, hasSplit) {
+  window.scoreHR = function(p, st, sv, oppPitcher, venue, trn, paWeight, hasSplit) {
     const pid = String(p.person?.id || '');
     const factors = [];
     let raw = 50;
@@ -9493,7 +9493,7 @@ async function loadBullpen(side, teamId, oppPitcherHand) {
     return { score, factors, pts };
   }
 
-  function scoreTB(p, st, sv, oppPitcher, venue, trn, paWeight, hasSplit) {
+  window.scoreTB = function(p, st, sv, oppPitcher, venue, trn, paWeight, hasSplit) {
     const factors = [];
     let raw = 50;
 
@@ -9575,7 +9575,7 @@ async function loadBullpen(side, teamId, oppPitcherHand) {
     return { score, factors };
   }
 
-  function scoreHit(p, st, sv, oppPitcher, trn, paWeight, hasSplit) {
+  window.scoreHit = function(p, st, sv, oppPitcher, trn, paWeight, hasSplit) {
     const factors = [];
     let raw = 50;
 
