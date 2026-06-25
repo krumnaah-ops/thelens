@@ -1,34 +1,24 @@
 name: Fetch Savant Data
-
 on:
   schedule:
-    # Runs at 11:00 AM UTC daily (7 AM ET / 6 AM CT)
-    # Early enough to have fresh data before first pitch
     - cron: '0 11 * * *'
   workflow_dispatch:
-    # Allows manual trigger from GitHub Actions tab
-
 jobs:
   fetch:
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # needed to push data files back to repo
-
+      contents: write
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
       - name: Install dependencies
         run: pip install requests
-
       - name: Run Savant fetch script
-        run: python scripts/fetch_savant.py
-
+        run: python fetch_savant.py
       - name: Commit and push data files
         run: |
           git config user.name "github-actions[bot]"
