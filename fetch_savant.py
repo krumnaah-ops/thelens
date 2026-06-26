@@ -25,7 +25,7 @@ import urllib.error
 from datetime import datetime, timezone
 from io import StringIO
 
-DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+DATA_DIR = os.path.join(os.path.dirname(__file__), '..', 'data')
 os.makedirs(DATA_DIR, exist_ok=True)
 
 SEASON = datetime.now().year
@@ -445,6 +445,7 @@ def fetch_baserunning():
             xbt_proxy = None
 
         result[pid] = {
+            'player_name':  split.get('player', {}).get('fullName', ''),
             'sb':           sb,
             'cs':           cs,
             'att':          att,
@@ -569,6 +570,12 @@ def main():
     write_meta(files_updated)
     files_updated.append('savant-meta.json')
 
+    # Grade yesterday's picks
+    try:
+        grade_picks()
+    except Exception as e:
+        print(f'  Grade picks error: {e}')
+
     print(f'\n=== Done — {len(files_updated)} files updated ===')
     for f in files_updated:
         print(f'  ✓ {f}')
@@ -577,6 +584,106 @@ def main():
         core = [e for e in errors if e in ('pitcher-expected', 'hitter-expected', 'hitter-statcast')]
         if core:
             sys.exit(1)
+
+
+def grade_picks():
+    """
+    Grade yesterday's top picks against actual results.
+    - Pitcher hit = actual Ks >= kLow (model floor)
+    - Hitter hit = batter hit a HR
+    """
+    print('\nGrading yesterday\'s picks...')
+    history_path = os.path.join(DATA_DIR, 'pick-history.json')
+    if not os.path.exists(history_path):
+        print('  No pick history file found')
+        return
+
+    with open(history_path) as f:
+        history = json.load(f)
+
+    picks = history.get('picks', [])
+    last_graded = history.get('lastGraded')
+    yesterday = (datetime.now() - __import__('datetime', fromlist=['timedelta']).timedelta(days=1)).strftime('%Y-%m-%d')
+
+    # Only grade picks from yesterday that aren't graded yet
+    ungraded = [p for p in picks if p.get('date') == yesterday and p.get('result') is None]
+    if not ungraded:
+        print(f'  No ungraded picks for {yesterday}')
+        return
+
+    print(f'  Grading {len(ungraded)} picks from {yesterday}')
+
+    for pick in ungraded:
+        try:
+            pid = pick.get('playerId')
+            pick_type = pick.get('type')  # 'pitcher' or 'hitter'
+            game_pk = pick.get('gamePk')
+
+            if not pid or not game_pk:
+                continue
+
+            # Fetch game box score
+            data = mlb_get(f'game/{game_pk}/boxscore')
+            if not data:
+                continue
+
+            if pick_type == 'pitcher':
+                k_floor = pick.get('kFloor', 4)
+                # Find pitcher in box score
+                for team_side in ['away', 'home']:
+                    pitchers = data.get('teams', {}).get(team_side, {}).get('pitchers', [])
+                    player_info = data.get('teams', {}).get(team_side, {}).get('players', {})
+                    for pid_key, pdata in player_info.items():
+                        if pdata.get('person', {}).get('id') == pid:
+                            actual_ks = pdata.get('stats', {}).get('pitching', {}).get('strikeOuts', 0)
+                            pick['actualKs'] = actual_ks
+                            pick['result'] = 'hit' if actual_ks >= k_floor else 'miss'
+                            print(f'  {pick.get("playerName")}: {actual_ks} Ks vs floor {k_floor} → {pick["result"]}')
+                            break
+
+            elif pick_type == 'hitter':
+                # Find batter in box score
+                for team_side in ['away', 'home']:
+                    player_info = data.get('teams', {}).get(team_side, {}).get('players', {})
+                    for pid_key, pdata in player_info.items():
+                        if pdata.get('person', {}).get('id') == pid:
+                            actual_hr = pdata.get('stats', {}).get('batting', {}).get('homeRuns', 0)
+                            pick['actualHR'] = actual_hr
+                            pick['result'] = 'hit' if actual_hr >= 1 else 'miss'
+                            print(f'  {pick.get("playerName")}: {actual_hr} HR → {pick["result"]}')
+                            break
+
+        except Exception as e:
+            print(f'  Error grading pick {pick.get("playerName")}: {e}')
+        time.sleep(0.1)
+
+    # Update model record
+    record = history.get('modelRecord', {'pitcher': {'hits': 0, 'total': 0}, 'hitter': {'hits': 0, 'total': 0}})
+    for pick in picks:
+        if pick.get('result') is not None:
+            t = pick.get('type', 'hitter')
+            if t not in record:
+                record[t] = {'hits': 0, 'total': 0}
+
+    # Recalculate from all graded picks
+    record = {'pitcher': {'hits': 0, 'total': 0}, 'hitter': {'hits': 0, 'total': 0}}
+    for pick in picks:
+        if pick.get('result') in ('hit', 'miss'):
+            t = pick.get('type', 'hitter')
+            if t in record:
+                record[t]['total'] += 1
+                if pick['result'] == 'hit':
+                    record[t]['hits'] += 1
+
+    history['picks'] = picks
+    history['lastGraded'] = yesterday
+    history['modelRecord'] = record
+
+    with open(history_path, 'w') as f:
+        json.dump(history, f, separators=(',', ':'), indent=2)
+
+    print(f'  Pitcher record: {record["pitcher"]["hits"]}/{record["pitcher"]["total"]}')
+    print(f'  Hitter record:  {record["hitter"]["hits"]}/{record["hitter"]["total"]}')
 
 
 if __name__ == '__main__':
