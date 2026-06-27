@@ -81,15 +81,23 @@ def mlb_get(path, retries=3):
 def parse_csv(text):
     if not text or not text.strip():
         return []
+    # Strip UTF-8 BOM if present (Savant CSVs often have \ufeff at start)
+    text = text.lstrip('\ufeff').lstrip('\xef\xbb\xbf')
     # Skip any non-CSV preamble (HTML error pages etc)
     lines = text.strip().splitlines()
-    # Find the header line (contains a comma and looks like CSV)
+    # Find the header line (contains a comma and looks like CSV, not HTML)
     start = 0
     for i, line in enumerate(lines):
         if ',' in line and not line.startswith('<'):
             start = i
             break
-    return list(csv.DictReader(StringIO('\n'.join(lines[start:]))))
+    clean = '\n'.join(lines[start:])
+    rows = list(csv.DictReader(StringIO(clean)))
+    # Strip BOM from all keys in every row (in case it survived)
+    cleaned = []
+    for row in rows:
+        cleaned.append({k.lstrip('\ufeff').strip(): v for k, v in row.items()})
+    return cleaned
 
 
 def safe_float(val, default=None):
@@ -150,13 +158,13 @@ def fetch_pitcher_arsenal():
     result = {}
     for row in parse_csv(text):
         # Try multiple possible player ID column names
-        pid = (safe_int(row.get('pitcher_id')) or
-               safe_int(row.get('player_id')) or
+        pid = (safe_int(row.get('player_id')) or
+               safe_int(row.get('pitcher_id')) or
                safe_int(row.get('IDfg')))
         if not pid:
             continue
         if pid not in result:
-            result[pid] = {'pitches': []}
+            result[pid] = {'pitches': [], 'player_name': f"{row.get('first_name','')} {row.get('last_name','')}".strip()}
         result[pid]['pitches'].append({
             'pitch_type': row.get('pitch_type', '') or row.get('pitch_name', ''),
             'pitch_name': row.get('pitch_name', ''),
@@ -203,18 +211,18 @@ def fetch_pitcher_expected():
         if not pid:
             continue
         result[pid] = {
-            'player_name':   row.get('player_name', '') or row.get('name', ''),
-            'xba':           safe_float(row.get('xba')),
-            'xslg':          safe_float(row.get('xslg')),
-            'xwoba':         safe_float(row.get('xwoba')),
-            'xera':          safe_float(row.get('xera')),
+            'player_name':   row.get('player_name', '') or row.get('name', '') or f"{row.get('first_name','')} {row.get('last_name','')}".strip(),
+            'xba':           safe_float(row.get('xba') or row.get('est_ba')),
+            'xslg':          safe_float(row.get('xslg') or row.get('est_slg')),
+            'xwoba':         safe_float(row.get('xwoba') or row.get('est_woba')),
+            'xera':          safe_float(row.get('xera') or row.get('est_era')),
             'barrel_pct':    safe_float(row.get('barrel_batted_rate') or row.get('barrel_pct') or row.get('brl_percent')),
             'hard_hit_pct':  safe_float(row.get('hard_hit_percent') or row.get('hard_hit_pct') or row.get('hard_hit%')),
             'exit_velo_avg': safe_float(row.get('avg_exit_velocity') or row.get('exit_velocity_avg') or row.get('launch_speed')),
             'k_pct':         safe_float(row.get('k_percent') or row.get('strikeout_percent')),
             'bb_pct':        safe_float(row.get('bb_percent') or row.get('walk_percent')),
             'woba':          safe_float(row.get('woba')),
-            'pa':            safe_int(row.get('pa')),
+            'pa':            safe_int(row.get('pa') or row.get('bip')),
         }
     print(f'  {len(result)} pitchers')
     return result
@@ -268,17 +276,17 @@ def fetch_hitter_expected():
         if not pid:
             continue
         result[pid] = {
-            'player_name':   row.get('player_name', '') or row.get('name', ''),
-            'xba':           safe_float(row.get('xba')),
-            'xslg':          safe_float(row.get('xslg')),
-            'xwoba':         safe_float(row.get('xwoba')),
+            'player_name':   row.get('player_name', '') or row.get('name', '') or f"{row.get('first_name','')} {row.get('last_name','')}".strip(),
+            'xba':           safe_float(row.get('xba') or row.get('est_ba')),
+            'xslg':          safe_float(row.get('xslg') or row.get('est_slg')),
+            'xwoba':         safe_float(row.get('xwoba') or row.get('est_woba')),
             'barrel_pct':    safe_float(row.get('barrel_batted_rate') or row.get('barrel_pct') or row.get('brl_percent')),
             'hard_hit_pct':  safe_float(row.get('hard_hit_percent') or row.get('hard_hit_pct') or row.get('hard_hit%')),
             'exit_velo_avg': safe_float(row.get('avg_exit_velocity') or row.get('exit_velocity_avg') or row.get('launch_speed')),
             'k_pct':         safe_float(row.get('k_percent') or row.get('strikeout_percent')),
             'bb_pct':        safe_float(row.get('bb_percent') or row.get('walk_percent')),
             'woba':          safe_float(row.get('woba')),
-            'pa':            safe_int(row.get('pa')),
+            'pa':            safe_int(row.get('pa') or row.get('bip')),
             # Extra hitter fields
             'sprint_speed':  safe_float(row.get('sprint_speed')),
             'pull_percent':  safe_float(row.get('pull_percent')),
