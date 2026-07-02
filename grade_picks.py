@@ -1,18 +1,16 @@
-
-grade_picks.py — Official Model Record grader for The Lens.
-
-Runs nightly via GitHub Actions. Fetches ungraded picks from Supabase
-(pick_history), pulls MLB Stats API box scores, grades them with the SAME
-rules the UI displays, and writes results using the SERVICE ROLE key.
-
-Grading rules (must stay in sync with gradePendingPicks in index.html):
-  pitcher: hit if IP >= 4 and K >= 5, else miss
-  hitter:  hit if HR >= 1, else miss
-
-Env vars (set as GitHub Actions secrets):
-  SUPABASE_URL          e.g. https://xxxx.supabase.co
-  SUPABASE_SERVICE_KEY  the service_role key (NEVER put this in index.html)
-"""
+# grade_picks.py -- Official Model Record grader for The Lens.
+#
+# Runs nightly via GitHub Actions. Fetches ungraded picks from Supabase
+# (pick_history), pulls MLB Stats API box scores, grades them with the SAME
+# rules the UI displays, and writes results using the SERVICE ROLE key.
+#
+# Grading rules (must stay in sync with gradePendingPicks in index.html):
+#   pitcher: hit if IP >= 4 and K >= 5, else miss
+#   hitter:  hit if HR >= 1, else miss
+#
+# Env vars (set as GitHub Actions secrets):
+#   SUPABASE_URL          e.g. https://xxxx.supabase.co
+#   SUPABASE_SERVICE_KEY  the service_role key (NEVER put this in index.html)
 
 import os
 import sys
@@ -61,7 +59,7 @@ def sb(path, method="GET", body=None, prefer="return=representation"):
 
 
 def parse_ip(val):
-    """MLB IP strings like '5.2' mean 5 and 2/3 — but the app's client-side
+    """MLB IP strings like '5.2' mean 5 and 2/3 -- but the app's client-side
     grader uses parseFloat, so we mirror that exactly to keep grades identical."""
     try:
         return float(val)
@@ -117,13 +115,13 @@ def main():
             failed += len(game_picks)
             continue
 
-        # Only grade if the game actually went final — a postponed/suspended
+        # Only grade if the game actually went final -- a postponed/suspended
         # game shouldn't turn every pick into a 'miss'.
         teams = box.get("teams", {})
         players = list(teams.get("away", {}).get("players", {}).values()) + \
                   list(teams.get("home", {}).get("players", {}).values())
         if not players:
-            print(f"[grade] no player data for {game_pk} (postponed?) — skipping")
+            print(f"[grade] no player data for {game_pk} (postponed?) -- skipping")
             failed += len(game_picks)
             continue
 
@@ -143,7 +141,7 @@ def main():
                 print(f"[grade] write failed for pick {p['id']}: {e}")
                 failed += 1
 
-    print(f"[grade] done — {graded} graded, {failed} skipped/failed")
+    print(f"[grade] done -- {graded} graded, {failed} skipped/failed")
     # Non-zero exit only on total failure so the Action surfaces real outages
     if graded == 0 and failed > 0:
         sys.exit(1)
