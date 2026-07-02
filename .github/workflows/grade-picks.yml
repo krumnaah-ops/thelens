@@ -1,0 +1,29 @@
+# .github/workflows/grade-picks.yml
+# Grades yesterday's Model Record picks nightly using the Supabase
+# service-role key (repo secret). Runs at 10:00 UTC = 5-6 AM ET,
+# after even the latest West Coast games have gone final.
+name: Grade Model Record Picks
+
+# NOTE: "on" is quoted deliberately — unquoted, YAML parses it as boolean true
+# and the workflow never triggers (same bug that bit fetch_savant.yml).
+"on":
+  schedule:
+    - cron: "0 10 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  grade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Grade picks
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python grade_picks.py
