@@ -80,13 +80,24 @@ def grade_pick(pick, players):
                 return {"result": result, "actual_ks": ks, "actual_hr": None}
         return {"result": "miss", "actual_ks": None, "actual_hr": None}
 
-    if pick["type"] == "hitter":
+    if pick["type"] in ("hitter", "hitter_tb"):
         for pl in players:
             if (pl.get("person", {}).get("fullName", "").strip().lower() == name
                     and pl.get("stats", {}).get("batting")):
-                hr = int(pl["stats"]["batting"].get("homeRuns") or 0)
-                result = "hit" if hr >= 1 else "miss"
-                return {"result": result, "actual_ks": None, "actual_hr": hr}
+                b = pl["stats"]["batting"]
+                hr = int(b.get("homeRuns") or 0)
+                if pick["type"] == "hitter":
+                    result = "hit" if hr >= 1 else "miss"
+                    return {"result": result, "actual_ks": None, "actual_hr": hr}
+                # hitter_tb: 2+ total bases (standard 1.5 TB line)
+                tb = (int(b.get("hits") or 0) + int(b.get("doubles") or 0)
+                      + 2 * int(b.get("triples") or 0) + 3 * hr)
+                result = "hit" if tb >= 2 else "miss"
+                return {"result": result, "actual_ks": None,
+                        "actual_hr": hr, "actual_tb": tb}
+        if pick["type"] == "hitter_tb":
+            return {"result": "miss", "actual_ks": None,
+                    "actual_hr": None, "actual_tb": None}
         return {"result": "miss", "actual_ks": None, "actual_hr": None}
 
     return None
