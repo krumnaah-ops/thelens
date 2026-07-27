@@ -1,0 +1,62 @@
+name: Probe bo3 API (one-off)
+
+# Run manually from the Actions tab → "Probe bo3 API (one-off)" → Run workflow.
+# Reads the raw JSON so we can confirm field names, then delete this file.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install aiohttp
+        run: pip install aiohttp
+
+      - name: Run probe
+        run: |
+          cat > probe_bo3.py << 'PYEOF'
+          import aiohttp, asyncio, json
+
+          BASE = "https://api.bo3.gg/api/v1"
+          HEADERS = {
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
+              "Accept": "application/json",
+              "Origin": "https://bo3.gg",
+              "Referer": "https://bo3.gg/",
+          }
+
+          async def get(session, path, params):
+              async with session.get(f"{BASE}{path}", params=params, headers=HEADERS) as r:
+                  r.raise_for_status()
+                  return await r.json()
+
+          async def main():
+              async with aiohttp.ClientSession() as s:
+                  matches = await get(s, "/matches", {
+                      "scope": "widget-matches",
+                      "page[offset]": "0",
+                      "page[limit]": "5",
+                      "sort": "tier_rank,-start_date",
+                      "filter[matches.status][in]": "finished",
+                      "filter[matches.discipline_id][eq]": "1",
+                      "with": "teams,tournament,games",
+                  })
+                  out = {"finished_matches_sample": matches}
+                  rows = matches.get("data") if isinstance(matches, dict) else matches
+                  if rows:
+                      first = rows[0]
+                      slug = first.get("slug") or first.get("id")
+                      try:
+                          detail = await get(s, f"/matches/{slug}", {
+                              "with": "teams,tournament,games,streams",
+                          })
+                          out["match_detail_sample"] = detail
+                      except Exception as e:
+                          out["match_detail_error"] = str(e)
+                  print(json.dumps(out, indent=2))
+
+          asyncio.run(main())
+          PYEOF
+          python3 probe_bo3.py
